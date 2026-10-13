@@ -300,12 +300,26 @@ function readThemeColors() {
 
 // Build a fresh Chart.js options object coloured with the current theme.
 // Pure function: no side effects, no DOM mutation, no Chart.js calls.
-function buildChartOptions() {
+function buildChartOptions(context) {
     const c = readThemeColors();
+    
     return {
         responsive: true,
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
+        animation: {
+            duration: 750,
+            easing: 'easeInOutQuart'
+        },
+        elements: {
+            point: {
+                radius: 2,
+                hoverRadious: 5,
+            },
+            line: {
+                boarderWidth: 1,
+            },
+        },
         plugins: {
             legend: {
                 position: 'top',
@@ -319,7 +333,7 @@ function buildChartOptions() {
                 titleColor:      c.textPrimary,
                 bodyColor:       c.textSecondary,
                 borderColor:     c.borderRegular,
-                borderWidth: 1,
+                borderWidth:     1,
             },
         },
         scales: {
@@ -332,10 +346,25 @@ function buildChartOptions() {
                 grid: { color: c.borderSubtle },
             },
             y: {
+		        type: 'linear',
                 beginAtZero: true,
+		        position: 'left',
                 ticks: { color: c.textTertiary },
                 grid: { color: c.borderSubtle },
+		        max: 140,
             },
+	    y1: {
+		        type: 'linear',
+		        beginAtZero: true,
+                position: 'right',
+                ticks: { color: c.textTertiary },
+                grid: { drawOnChartArea: false },
+		        // Add some padding to the max value
+                suggestedMax: function(context) {
+                    const max = Math.max(...context.chart.data.datasets[2].data);
+                    return max * 1.2; // Add 10% padding
+                },
+	        }
         },
     };
 }
@@ -364,13 +393,14 @@ async function refreshHistory() {
         borderWidth: 2,
         pointRadius: 0,
         tension: 0.3,
-        hidden,
+	yAxisID: 'y',
+        hidden
     });
 
     const datasets = [
         ds('Temperature (°C)', history.temperatures, '#ff3b30'),
         ds('Utilization (%)',  history.utilizations, '#34c759'),
-        ds('Memory (MiB)',     history.memory,       '#007aff', true),
+        ds('Memory (MiB)',     history.memory,       '#007aff', 'y1', true),
         ds('Power (W)',        history.power,        '#af52de', true),
     ];
 
@@ -379,13 +409,26 @@ async function refreshHistory() {
         datasets,
     };
 
-    const options = buildChartOptions();
-
+    const options = buildChartOptions(canvas.getContext('2d'));
+    
     if (chartInstance) {
-        chartInstance.data = data;
+        console.log("Use existing chartInstance...");
+        
+        //Update data but keep visibility of datasets intact
+        chartInstance.data.labels = history.timestamps;
+        datasets.forEach((item, index) => {
+            console.log("index: " + index)
+            console.log(item.data)
+            console.log(chartInstance)
+            console.log(chartInstance.data.datasets[index].label)
+            chartInstance.data.datasets[index].data = item.data
+        })
+        
+
         chartInstance.options = options;
         chartInstance.update('none');
     } else if (window.Chart) {
+        console.log("No chartInstance yet. Create one...");
         chartInstance = new window.Chart(canvas.getContext('2d'), {
             type: 'line',
             data,
