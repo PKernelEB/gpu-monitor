@@ -306,7 +306,7 @@ function buildChartOptions(context) {
     return {
         responsive: true,
         maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
+        interaction: {mode: 'index', intersect: false},
         animation: {
             duration: 750,
             easing: 'easeInOutQuart'
@@ -325,15 +325,15 @@ function buildChartOptions(context) {
                 position: 'top',
                 labels: {
                     color: c.textSecondary,
-                    font: { size: 12 },
+                    font: {size: 12},
                 },
             },
             tooltip: {
                 backgroundColor: c.bgSecondary,
-                titleColor:      c.textPrimary,
-                bodyColor:       c.textSecondary,
-                borderColor:     c.borderRegular,
-                borderWidth:     1,
+                titleColor: c.textPrimary,
+                bodyColor: c.textSecondary,
+                borderColor: c.borderRegular,
+                borderWidth: 1,
             },
         },
         scales: {
@@ -343,28 +343,44 @@ function buildChartOptions(context) {
                     autoSkip: true,
                     color: c.textTertiary,
                 },
-                grid: { color: c.borderSubtle },
+                grid: {color: c.borderSubtle},
             },
             y: {
-		        type: 'linear',
+                type: 'linear',
                 beginAtZero: true,
-		        position: 'left',
-                ticks: { color: c.textTertiary },
-                grid: { color: c.borderSubtle },
-		        max: 140,
+                position: 'left',
+                ticks: {color: c.textTertiary},
+                grid: {color: c.borderSubtle},
+                max: 130,
             },
-	    y1: {
-		        type: 'linear',
-		        beginAtZero: true,
+            y1: {
+                type: 'linear',
+                beginAtZero: true,
                 position: 'right',
-                ticks: { color: c.textTertiary },
-                grid: { drawOnChartArea: false },
-		        // Add some padding to the max value
-                suggestedMax: function(context) {
+                ticks: {color: c.textTertiary},
+                grid: {drawOnChartArea: false},
+                // Add some padding to the max value
+                suggestedMax: function (context) {
                     const max = Math.max(...context.chart.data.datasets[2].data);
-                    return max * 1.2; // Add 10% padding
+                    return max * 1.1; // Add 10% padding
                 },
-	        }
+            },
+            y2: {
+                type: 'linear',
+                beginAtZero: true,
+                position: 'right',
+                ticks: {color: c.textTertiary},
+                grid: {drawOnChartArea: false},
+                // Add some padding to the max value
+                suggestedMax: function (context) {
+                    const max = Math.max(...context.chart.data.datasets[3].data);
+                    return max * 1.05; // Add 5% padding
+                },
+                // Not working as the scale has no label(s)
+                color: function (context) {
+                    return context.chart.data.datasets[3].borderColor
+                },
+            }
         },
     };
 }
@@ -385,7 +401,7 @@ async function refreshHistory() {
     const canvas = document.getElementById('history-chart');
     if (!canvas) return;
 
-    const ds = (label, data, color, hidden = false) => ({
+    const ds = (label, data, color, yAxisID = 'y', hidden = false) => ({
         label,
         data,
         borderColor: color,
@@ -393,7 +409,7 @@ async function refreshHistory() {
         borderWidth: 2,
         pointRadius: 0,
         tension: 0.3,
-	yAxisID: 'y',
+		yAxisID,
         hidden
     });
 
@@ -401,7 +417,7 @@ async function refreshHistory() {
         ds('Temperature (°C)', history.temperatures, '#ff3b30'),
         ds('Utilization (%)',  history.utilizations, '#34c759'),
         ds('Memory (MiB)',     history.memory,       '#007aff', 'y1', true),
-        ds('Power (W)',        history.power,        '#af52de', true),
+        ds('Power (W)',        history.power,        '#af52de', 'y2', true),
     ];
 
     const data = {
@@ -413,14 +429,9 @@ async function refreshHistory() {
     
     if (chartInstance) {
         console.log("Use existing chartInstance...");
-        
         //Update data but keep visibility of datasets intact
         chartInstance.data.labels = history.timestamps;
         datasets.forEach((item, index) => {
-            console.log("index: " + index)
-            console.log(item.data)
-            console.log(chartInstance)
-            console.log(chartInstance.data.datasets[index].label)
             chartInstance.data.datasets[index].data = item.data
         })
         
